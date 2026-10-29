@@ -8,12 +8,13 @@ The browser environment here blocks HTTP requests, so the script injects
 responses captured from the real FastAPI server. This is not a live-site test.
 """
 
-from pathlib import Path
-from urllib.request import urlopen
-from playwright.sync_api import sync_playwright
 import json
 import os
 import shutil
+from pathlib import Path
+from urllib.request import urlopen
+
+from playwright.sync_api import sync_playwright
 
 root=Path(__file__).resolve().parents[1]
 web=root/'src/rackhelm/web'
@@ -24,7 +25,8 @@ css=(web/'styles.css').read_text()
 js=(web/'app.js').read_text()
 host=os.environ.get('RACKHELM_BASE_URL', 'http://127.0.0.1:8000').rstrip('/')
 def get(path):
-    with urlopen(host+path,timeout=12) as r: return json.load(r)
+    with urlopen(host+path,timeout=12) as r:
+        return json.load(r)
 
 overview=get('/api/v1/overview')
 incidents=get('/api/v1/incidents')
