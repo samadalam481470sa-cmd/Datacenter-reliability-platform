@@ -1,0 +1,15 @@
+{
+  "rackhelm_url": "http://127.0.0.1:8000",
+  "endpoints": [
+    {
+      "rack_id": "Z01-R01",
+      "base_url": "https://bmc01.internal.example",
+      "thermal_path": "/redfish/v1/Chassis/1/Thermal",
+      "power_path": "/redfish/v1/Chassis/1/Power",
+      "username_env": "RACKHELM_REDFISH_USER_01",
+      "password_env": "RACKHELM_REDFISH_PASS_01",
+      "ca_bundle": "/etc/rackhelm/bmc-ca.pem",
+      "max_power_kw": 20
+    }
+  ]
+}

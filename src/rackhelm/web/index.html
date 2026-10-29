@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#090f1b">
+  <meta name="description" content="RackHelm FleetOS — data center thermal, power and GPU fleet reliability intelligence, with a live synthetic digital twin.">
+  <title>RackHelm FleetOS — Data Center Reliability Command</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/styles.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" aria-label="Primary navigation">
+    <a class="brand" href="/" aria-label="RackHelm home">
+      <span class="brand-icon">⌗</span><span class="brand-text"><strong>RACKHELM</strong><span>FLEET OPERATIONS</span></span>
+    </a>
+    <div class="tenant-label"><span class="status-dot"></span> SYNTHETIC SITE / 001 <span class="chevron">⌄</span></div>
+    <div class="nav-heading">COMMAND CENTER</div>
+    <a class="nav-item active" href="#overview"><span class="nav-symbol">▦</span> Overview <span class="nav-end">●</span></a>
+    <a class="nav-item" href="#fleet"><span class="nav-symbol">▤</span> Rack fleet <span class="nav-end">48</span></a>
+    <a class="nav-item" href="#incidents"><span class="nav-symbol">◈</span> Incident queue <span id="incident-side-count" class="nav-counter">–</span></a>
+    <a class="nav-item" href="#simulation"><span class="nav-symbol">◫</span> Failure simulation</a>
+    <div class="nav-separator"></div>
+    <div class="nav-heading">ENGINEERING</div>
+    <a class="nav-item" href="/docs" target="_blank" rel="noopener noreferrer"><span class="nav-symbol">⌘</span> API documentation <span class="nav-end">↗</span></a>
+    <a class="nav-item" href="https://github.com" target="_blank" rel="noopener noreferrer"><span class="nav-symbol">↗</span> Source repository</a>
+    <div class="sidebar-spacer"></div>
+    <div class="side-card"><div class="side-card-title"><span class="status-dot"></span> DIGITAL TWIN ACTIVE</div>
+      <div>48 modeled racks · 4 thermal zones · 8 cooling units · 8 power feeds</div>
+      <span class="side-note">No physical equipment is controlled.</span>
+    </div>
+    <div class="user-row"><span class="avatar">RH</span><span><strong>Operations Console</strong><small>Research / Demo access</small></span><span class="user-ellipsis">···</span></div>
+  </aside>
+  <div class="main-wrap">
+    <header class="topbar"><div class="breadcrumb">Infrastructure <span>/</span> <b>Reliability Overview</b></div>
+      <div class="top-actions"><span class="top-live"><span class="status-dot"></span> DEMO TELEMETRY LIVE</span><span class="clock" id="clock">--:-- UTC</span><button id="refresh" class="icon-button" type="button" aria-label="Refresh live telemetry" title="Refresh telemetry">↻</button></div>
+    </header>
+    <main class="content" id="overview">
+      <section class="hero">
+        <div><div class="eyebrow">DATA CENTER INTELLIGENCE PLATFORM <span class="beta-label">FLEETOS 1.0</span></div>
+          <h1>Infrastructure under control<span class="accent">.</span></h1>
+          <p>Detect thermal hotspots, predict equipment failure risk, and model cooling and power redundancy before small problems become costly outages.</p>
+          <div class="hero-facts"><span><i class="status-dot"></i> Engine operational</span><span>⌁ 5-minute sensor cadence</span><span>◇ Advisory-only recommendations</span></div>
+        </div><div class="hero-decoration"><div class="hero-circle"><span>⌗</span></div><small>RACKHELM / CORE</small></div>
+      </section>
+      <section class="stats-grid" aria-label="Fleet status metrics">
+        <article class="stat-card"><div class="stat-top"><span>RACK FLEET</span><span class="stat-icon navy">▦</span></div><div class="stat-main"><strong id="k-racks">—</strong><small>racks</small></div><div class="stat-foot"><span class="dot teal"></span> <span id="k-gpu">—</span> GPU-dense racks monitored</div></article>
+        <article class="stat-card"><div class="stat-top"><span>IT POWER LOAD</span><span class="stat-icon cyan">ϟ</span></div><div class="stat-main"><strong id="k-power">—</strong><small>kW</small></div><div class="stat-foot">Across 4 facility zones</div></article>
+        <article class="stat-card"><div class="stat-top"><span>RACKS AT RISK</span><span class="stat-icon amber">△</span></div><div class="stat-main amber-text"><strong id="k-alerts">—</strong><small>flagged</small></div><div class="stat-foot"><span class="dot amber"></span><span id="k-critical">—</span> critical classifications</div></article>
+        <article class="stat-card"><div class="stat-top"><span>ESTIMATED PUE</span><span class="stat-icon purple">◉</span></div><div class="stat-main"><strong id="k-pue">—</strong><small>PUE</small></div><div class="stat-foot">Modeled, not metered</div></article>
+      </section>
+      <div class="split-main" id="fleet">
+        <section class="panel heat-panel"><div class="panel-title-row"><div><div class="panel-eyebrow">LIVE FLEET TOPOLOGY</div><h2>Rack thermal map</h2><p>Inlet temperature mapped to physical racks. Select any rack for diagnostics.</p></div><span class="panel-badge"><span class="status-dot"></span> LIVE SIMULATED</span></div>
+          <div class="heat-toolbar"><div class="zone-switch" id="zone-switch" role="group" aria-label="Select a thermal zone"></div><div class="legend"><span>COOL</span><div class="legend-colors"><i></i><i></i><i></i><i></i><i></i><i></i></div><span>HOT</span></div></div>
+          <div class="aisle-labels"><span>ROW A — HOT / COLD AISLE</span><span>AIRFLOW →</span></div>
+          <div id="rack-map" class="rack-map" role="group" aria-label="Click a rack to inspect it"></div>
+          <div class="map-footer"><span><span class="mini-dot good"></span> Within rack threshold</span><span><span class="mini-dot warn"></span> Elevated inlet</span><span><span class="mini-dot bad"></span> Critical / anomalous</span><span class="map-footer-note">Target limit: demo-configured per rack (27 °C)</span></div>
+        </section>
+        <section class="panel detail-panel"><div class="panel-title-row detail-head"><div><div class="panel-eyebrow">ASSET DIAGNOSTICS</div><h2 id="selected-rack-heading">Rack —</h2><p id="selected-rack-sub">Select a rack from the heatmap</p></div><span id="asset-tag" class="asset-tag">GPU</span></div>
+          <div class="rack-status-row"><div class="rack-value"><small>INLET TEMPERATURE</small><div><strong id="selected-temp">—</strong><span>°C</span></div></div><div class="rack-value"><small>RISK INDEX</small><div><strong id="selected-risk">—</strong><span>/ 100</span></div></div></div>
+          <div class="trend-heading"><strong>Temperature trend</strong><span id="trend-direction">Last 3 hours</span></div><div id="sparkline" class="chart-holder"><span class="muted">Loading…</span></div>
+          <div class="details-grid"><div><small>THERMAL HEADROOM</small><b id="selected-headroom">—</b></div><div><small>POWER DRAW</small><b id="selected-power">—</b></div><div><small>FAN SPEED</small><b id="selected-fan">—</b></div><div><small>LIMIT ETA</small><b id="selected-eta">—</b></div></div>
+          <div class="asset-findings"><div class="findings-head">DIAGNOSTIC SIGNALS <span id="signal-count">0</span></div><div id="asset-signals" class="asset-signal-list"><span class="muted">No analysis loaded.</span></div></div>
+        </section>
+      </div>
+      <section class="split-secondary">
+        <section class="panel" id="incidents"><div class="panel-title-row"><div><div class="panel-eyebrow">PRIORITIZED OPERATIONS</div><h2>Reliability incidents</h2><p>Automatically generated from monitoring signals.</p></div><span class="number-pill" id="incident-total">— EVENTS</span></div>
+          <div id="incident-list" class="incident-list"><span class="muted">Loading incident queue…</span></div>
+          <div class="panel-note">Acknowledgement and resolution require an operator API key. Demo is read-only.</div>
+        </section>
+        <section class="panel"><div class="panel-title-row"><div><div class="panel-eyebrow">RESILIENCE ENGINEERING</div><h2>N+1 redundancy</h2><p>Can each zone survive loss of its largest cooling unit?</p></div><span class="number-pill">MODELED</span></div>
+          <div class="redundancy-list" id="redundancy-list"><span class="muted">Loading capacity assessment…</span></div>
+          <div class="redundancy-disclaimer">Cooling numbers represent configured heat-removal kW equivalents, not cooling electrical consumption.</div>
+        </section>
+      </section>
+      <section class="panel scenario-panel" id="simulation"><div class="panel-title-row"><div><div class="panel-eyebrow">PLANNING & CAPACITY ENGINEERING</div><h2>Cooling failure what-if lab</h2><p>Explore a cooling degradation event and forecast a potential temperature excursion without controlling physical equipment.</p></div><span class="panel-badge"><span>◎</span> READ-ONLY SCENARIO</span></div>
+        <div class="scenario-layout"><div class="scenario-controls"><label for="scenario-zone">Target zone</label><select id="scenario-zone"><option value="Z01">ZONE 01</option><option value="Z02" selected>ZONE 02</option><option value="Z03">ZONE 03</option><option value="Z04">ZONE 04</option></select>
+          <div class="slider-title"><label for="cooling-loss">Cooling capacity reduction</label><output id="cooling-out" for="cooling-loss">30%</output></div><input id="cooling-loss" type="range" min="0" max="100" step="5" value="30">
+          <div class="slider-title"><label for="gpu-load">GPU / compute load shift</label><output id="gpu-out" for="gpu-load">+15%</output></div><input id="gpu-load" type="range" min="-30" max="60" step="5" value="15">
+          <div class="slider-title"><label for="setpoint">Supply air setpoint delta</label><output id="setpoint-out" for="setpoint">+0 °C</output></div><input id="setpoint" type="range" min="-5" max="6" step="1" value="0">
+          <button class="simulate-button" id="simulate-btn" type="button">▷ Run failure simulation <span>→</span></button>
+        </div><div class="scenario-output"><span>SIMULATION RESULT / ESTIMATED PEAK INLET</span><div class="scenario-big"><strong id="scenario-temp">—</strong><small>°C</small><span class="scenario-result-tag" id="scenario-tag">Awaiting scenario</span></div><div class="scenario-comparison"><div>Remaining cooling <strong id="scenario-cooling">—</strong></div><div>Projected rack heat <strong id="scenario-load">—</strong></div><div>Capacity shortfall <strong id="scenario-shortfall">—</strong></div></div><p id="scenario-explanation">Configure a scenario and run the forecast.</p><div class="model-warning">Simplified planning heuristic. Not calibrated CFD, BMS control, or a safety-rated prediction.</div></div></div>
+      </section>
+      <footer><div><b>⌗ RACKHELM</b> / FLEETOS ENGINEERING REFERENCE</div><div>Synthetic demonstration · Advisory-only decisions · <a href="/docs" target="_blank" rel="noopener noreferrer">API docs ↗</a></div></footer>
+    </main>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

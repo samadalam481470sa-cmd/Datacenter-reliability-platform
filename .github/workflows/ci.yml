@@ -1,0 +1,51 @@
+name: verify
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[dev]'
+      - run: ruff check src tests scripts
+      - run: pytest -q
+      - run: python -m build --wheel
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose up -d --build
+      - name: Exercise live REST endpoints
+        run: |
+          python - <<'PY'
+          import json, time
+          from urllib.request import urlopen
+          host = 'http://127.0.0.1:8000'
+          for _ in range(40):
+              try:
+                  with urlopen(host+'/health', timeout=3) as r:
+                      assert json.load(r)['status'] == 'ok'
+                  with urlopen(host+'/api/v1/overview', timeout=3) as r:
+                      assert json.load(r)['kpis']['rack_count'] == 48
+                  with urlopen(host+'/api/v1/scenario?zone=Z02&cooling_drop_pct=50', timeout=3) as r:
+                      assert 'estimated_peak_inlet_c' in json.load(r)
+                  with urlopen(host+'/', timeout=3) as r:
+                      assert 'Rack thermal map' in r.read().decode()
+                  break
+              except Exception:
+                  time.sleep(2)
+          else:
+              raise SystemExit('RackHelm smoke failed')
+          PY
+      - if: failure()
+        run: docker compose logs --no-color
+      - if: always()
+        run: docker compose down

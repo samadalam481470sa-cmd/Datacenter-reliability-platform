@@ -1,0 +1,66 @@
+{
+  "title": "RackHelm FleetOS — Data Center Reliability",
+  "uid": "rackhelm-fleetos",
+  "tags": ["rackhelm", "gpu", "fleet-reliability", "synthetic-reference"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-3h", "to": "now"},
+  "templating": {
+    "list": [
+      {"name":"zone", "type":"custom", "label":"Thermal zone", "query":"Z01,Z02,Z03,Z04", "current":{"text":"Z02","value":"Z02"}, "options":[{"text":"Z01","value":"Z01"},{"text":"Z02","value":"Z02","selected":true},{"text":"Z03","value":"Z03"},{"text":"Z04","value":"Z04"}],"hide":0}
+    ]
+  },
+  "annotations": {"list": []},
+  "panels": [
+    {
+      "id": 1, "title":"Total IT power (kW)", "type":"stat", "gridPos":{"h":5,"w":6,"x":0,"y":0},
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "targets":[{"expr":"rackhelm_it_power_kw","legendFormat":"IT power","refId":"A"}],
+      "fieldConfig":{"defaults":{"unit":"kwatt","decimals":1}}
+    },
+    {
+      "id": 2, "title":"Simulated PUE (not metered)", "type":"stat", "gridPos":{"h":5,"w":6,"x":6,"y":0},
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "targets":[{"expr":"rackhelm_estimated_pue","legendFormat":"PUE estimate","refId":"A"}],
+      "fieldConfig":{"defaults":{"decimals":2}}
+    },
+    {
+      "id": 3, "title":"Racks at risk", "type":"stat", "gridPos":{"h":5,"w":6,"x":12,"y":0},
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "targets":[{"expr":"rackhelm_racks_at_risk","legendFormat":"At risk","refId":"A"}],
+      "fieldConfig":{"defaults":{"decimals":0}}
+    },
+    {
+      "id": 4, "title":"Open incidents", "type":"stat", "gridPos":{"h":5,"w":6,"x":18,"y":0},
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "targets":[{"expr":"rackhelm_open_incidents","legendFormat":"Open","refId":"A"}],
+      "fieldConfig":{"defaults":{"decimals":0}}
+    },
+    {
+      "id": 5, "title":"Rack inlet temperature by rack (°C)", "type":"timeseries", "gridPos":{"h":9,"w":16,"x":0,"y":5},
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "targets":[{"expr":"rackhelm_rack_inlet_c{zone=\"$zone\"}","legendFormat":"{{rack}}","refId":"A"}],
+      "fieldConfig":{"defaults":{"unit":"celsius","decimals":1}}
+    },
+    {
+      "id": 6, "title":"Zone N+1 cooling headroom (kW)", "type":"timeseries", "gridPos":{"h":9,"w":8,"x":16,"y":5},
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "targets":[{"expr":"rackhelm_zone_cooling_n1_headroom_kw","legendFormat":"{{zone}}","refId":"A"}],
+      "fieldConfig":{"defaults":{"unit":"kwatt","decimals":1}}
+    },
+    {
+      "id": 7, "title":"Rack risk index", "type":"timeseries", "gridPos":{"h":9,"w":12,"x":0,"y":14},
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "targets":[{"expr":"rackhelm_rack_risk_index{zone=\"$zone\"}","legendFormat":"{{rack}}","refId":"A"}],
+      "fieldConfig":{"defaults":{"min":0,"max":100,"decimals":1}}
+    },
+    {
+      "id": 8, "title":"Rack power draw (kW)", "type":"timeseries", "gridPos":{"h":9,"w":12,"x":12,"y":14},
+      "datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},
+      "targets":[{"expr":"rackhelm_rack_power_kw{zone=\"$zone\"}","legendFormat":"{{rack}}","refId":"A"}],
+      "fieldConfig":{"defaults":{"unit":"kwatt","decimals":1}}
+    }
+  ]
+}

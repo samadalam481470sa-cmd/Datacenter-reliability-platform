@@ -1,0 +1,23 @@
+services:
+  rackhelm:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      RACKHELM_MODE: demo
+      RACKHELM_DB_PATH: /data/rackhelm.db
+    volumes:
+      - rackhelm_data:/data
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 160
+    mem_limit: 512m
+    cpus: 1.0
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    restart: unless-stopped
+volumes:
+  rackhelm_data:

@@ -1,0 +1,26 @@
+groups:
+  - name: rackhelm-fleet-reliability
+    interval: 30s
+    rules:
+      - alert: RackHelmCriticalRackRisk
+        expr: rackhelm_rack_risk_index >= 70
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Rack {{ $labels.rack }} scored critical by RackHelm"
+          description: "Review physical telemetry and confirm with independent sensors before taking action."
+      - alert: RackHelmCoolingFailoverDeficit
+        expr: rackhelm_zone_cooling_n1_headroom_kw < 0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cooling N+1 deficit in zone {{ $labels.zone }}"
+      - alert: RackHelmMetricsUnavailable
+        expr: absent(rackhelm_it_power_kw)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RackHelm collector is not providing expected metrics"
