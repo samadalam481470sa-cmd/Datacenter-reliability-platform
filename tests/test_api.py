@@ -121,3 +121,36 @@ def test_invalid_and_nonfinite_sensor_data_rejected(client,monkeypatch):
 def test_max_body_bytes(client):
     response=client.post("/api/v1/telemetry/batch",data="x"*1000001)
     assert response.status_code==413
+
+
+def test_hardened_response_headers(client):
+    headers=client.get("/health").headers
+    assert headers["cross-origin-opener-policy"]=="same-origin"
+    assert headers["cross-origin-resource-policy"]=="same-origin"
+    assert headers["x-robots-tag"]=="noindex, nofollow"
+    assert headers["strict-transport-security"].startswith("max-age=")
+    assert "camera=()" in headers["permissions-policy"]
+    assert "frame-ancestors 'none'" in headers["content-security-policy"]
+    assert "connect-src 'self'" in headers["content-security-policy"]
+
+
+def test_rate_limit_blocks_burst_but_not_liveness(client,monkeypatch):
+    from rackhelm import api as api_module
+    monkeypatch.setattr(api_module,"_limiter",api_module._RateLimiter(2))
+    assert client.get("/api/v1/racks?zone=Z01").status_code==200
+    assert client.get("/api/v1/racks?zone=Z01").status_code==200
+    blocked=client.get("/api/v1/racks?zone=Z01")
+    assert blocked.status_code==429
+    assert blocked.headers["retry-after"]=="60"
+    assert client.get("/health").status_code==200
+
+
+def test_rate_limit_can_be_disabled(client,monkeypatch):
+    from rackhelm import api as api_module
+    monkeypatch.setattr(api_module,"_limiter",api_module._RateLimiter(0))
+    assert all(client.get("/health").status_code==200 for _ in range(5))
+
+
+def test_chunked_write_body_rejected(client):
+    response=client.post("/api/v1/telemetry/batch",content=iter([b'{"readings":[]}']))
+    assert response.status_code==411

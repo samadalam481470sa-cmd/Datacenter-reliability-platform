@@ -170,7 +170,11 @@ The application also assesses power feeds separately using electrical kW. It doe
 - Telemetry is schema-checked, UTC normalized, freshness bounded and limited to 200 samples per request.
 - SQLite uses a single atomic `BEGIN IMMEDIATE` transaction for batch validation/write; identical replays are idempotent and conflicting duplicates abort the entire batch.
 - Incident state changes are recorded in a SHA-256 **tamper-evident** chained log with an integrity verification endpoint.
-- Secure response headers, no-store caching, no untrusted HTML injection in dashboard JavaScript, safe Prometheus asset labels.
+- Secure response headers (CSP, HSTS, COOP/CORP, Permissions-Policy, no-store, noindex), no untrusted HTML injection in dashboard JavaScript, safe Prometheus asset labels.
+- Request bodies are hard-capped (`RACKHELM_MAX_BODY_BYTES`) and chunked write bodies are refused, so a client cannot stream an unbounded payload.
+- Per-address rate limiting (`RACKHELM_RATE_LIMIT_PER_MINUTE`, default 600/min) with `/health` exempt for liveness probes.
+- Cross-origin browser reads are disabled by design: no CORS headers are issued.
+- CI pins every GitHub Action to a commit SHA and runs `pip-audit`, gitleaks secret scanning, CodeQL and weekly Dependabot updates.
 - Docker runs nonroot with a read-only root filesystem and all Linux capabilities dropped.
 
 **Limits:** local SQLite is not high-availability storage, a hash chain without off-host anchoring is not immutable evidence, API keys are not enterprise SSO/OIDC, public demo endpoints must never contain real customer telemetry, and dashboards are not certified control systems. See [Security and production gaps](docs/SECURITY.md).
@@ -203,8 +207,10 @@ scripts/
   import_jsonl.py       Operator-authenticated JSONL ingestion utility
   smoke.py              Live REST/system smoke test
 tests/                   Tests of API, sensor models, risk, storage, metrics
-.github/workflows/ci.yml
+.github/workflows/ci.yml  Tests, lint, dependency audit, secret scan, container smoke
+.github/workflows/codeql.yml  Static analysis
 Dockerfile / compose.yaml / .env.example
+LICENSE / THIRD-PARTY-NOTICES.md  License terms and dependency attributions
 docs/                    Architecture, security, operating guide, real screenshots
 ```
 
@@ -233,3 +239,11 @@ To publish this complete download as a new repository, see [GITHUB_PUBLISH.md](d
 RackHelm now includes a **read-only Redfish connector** that can collect inlet temperature, outlet temperature, fan RPM and consumed power from explicitly configured HTTPS BMC endpoints and send the resulting readings to the authenticated RackHelm telemetry API. The connector uses read-only credentials, TLS verification, bounded responses and no BMC control commands. See the [Redfish setup and security guide](docs/REDFISH_CONNECTOR.md) and [example inventory](config/redfish.example.json).
 
 **Integration status:** implemented and tested against fixtures; **not yet tested on physical servers**. A real deployment requires approved management-network access, vendor-specific sensor mapping, and operational security review. Optional GPU/network metrics may be unavailable and are not claimed as measured.
+
+---
+
+## License and attribution
+
+Released under the [MIT License](LICENSE). [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) lists every runtime dependency with its own license; all of them are permissive and require no source disclosure from you.
+
+The MIT text includes the standard "as is, without warranty of any kind" clause, which is the **only** liability limitation this repository provides. It does not certify the software as fit for any purpose, does not make a deployment compliant with law or industry regulation, and is not legal advice. Anything used in a real facility still needs its own engineering, safety, privacy and contractual review. Security findings are reported through [docs/SECURITY.md](docs/SECURITY.md).

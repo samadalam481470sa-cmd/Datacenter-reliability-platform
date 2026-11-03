@@ -8,8 +8,23 @@ build/
 .ruff_cache/
 .coverage
 .env
+.env.*
+!.env.example
 *.db
 *.db-*
+*.sqlite
+*.sqlite3
 .DS_Store
 config/*.local.json
 config/*.private.json
+# Never commit credentials or private key material.
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets/
+*.log
+.coverage.*
+htmlcov/

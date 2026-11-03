@@ -1,5 +1,7 @@
 # Security posture and production boundaries
 
+**Reporting a vulnerability:** use private vulnerability reporting on this repository (Security → Report a vulnerability). Do not open a public issue for an unfixed vulnerability.
+
 **Safe-by-default:** synthetic data in demo mode, network writes gated by a separate API key, no actuator endpoints. This is a software reference, not an audited production security product.
 
 ## Authentication
@@ -24,3 +26,18 @@ Compose binds only to localhost, drops Linux capabilities, uses nonroot UID 6553
 4. Add centralized structured logs, security monitoring, network policies, key rotation, off-host audit anchoring, alerts and a reviewed on-call response plan.
 5. Penetration-test auth/data isolation and prove denial of all physical control endpoints.
 6. Independently test sensor accuracy and site-specific engineering limits. A validated advisory is not a safety-rated controller.
+
+## Controls implemented in the application
+
+| Control | Behaviour | Limit |
+|---|---|---|
+| Rate limiting | Fixed-window counter per peer address, `RACKHELM_RATE_LIMIT_PER_MINUTE` (default 600/min), `/health` exempt, `0` disables | Per process only; use an edge proxy or WAF for multiple replicas |
+| Body size cap | `RACKHELM_MAX_BODY_BYTES` (default 1 MB) enforced before routing | Applies to write methods |
+| Chunked writes | Rejected with 411 because no length can be enforced | Standard JSON clients send `Content-Length` |
+| Peer identity | Uses the socket peer, never client-supplied `X-Forwarded-For` | Behind a proxy, set `--proxy-headers` with a restricted `--forwarded-allow-ips` |
+| Error handling | Unhandled exceptions return a generic 500; tracebacks stay in server logs | — |
+| Response headers | CSP, HSTS, COOP/CORP, `Permissions-Policy`, `noindex`, `no-store` | HSTS only takes effect over TLS |
+| Cross-origin reads | No CORS headers are issued, so browsers block foreign-origin reads | Same-origin only |
+| Supply chain | GitHub Actions pinned to commit SHAs; `pip-audit` and gitleaks in CI; CodeQL; weekly Dependabot | Scanners reduce, but do not eliminate, risk |
+
+**Nothing here makes the service unhackable.** The rate limiter is in-memory and resets on restart, SQLite is single-node storage, and there is no account system, MFA or per-asset authorization. Complete the prerequisites above before handling real facility data.

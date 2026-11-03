@@ -6,6 +6,8 @@ import asyncio
 import logging
 import os
 import secrets
+import threading
+import time
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
@@ -18,6 +20,56 @@ from rackhelm.observability import metrics_text
 from rackhelm.schemas import BatchIn, IncidentAction
 
 _WEB_DIR = Path(__file__).with_name("web")
+_LOG = logging.getLogger("rackhelm.api")
+
+# Bounds on what an unauthenticated peer can make this process accept or do.
+# Pydantic already bounds the *number* of readings; this bounds the raw bytes.
+_MAX_BODY_BYTES = int(os.environ.get("RACKHELM_MAX_BODY_BYTES", "1000000"))
+_RATE_LIMIT_PER_MINUTE = int(os.environ.get("RACKHELM_RATE_LIMIT_PER_MINUTE", "600"))
+_WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+_UNMETERED_PATHS = frozenset({"/health"})
+
+
+class _RateLimiter:
+    """Bounded per-process fixed-window limiter keyed by peer address.
+
+    This raises the cost of credential stuffing, scraping and runaway polling on
+    a single instance. It is not a distributed limiter: once several replicas
+    serve traffic, enforce limits at the edge proxy or WAF instead.
+
+    The peer address is used deliberately instead of ``X-Forwarded-For``, which
+    a client can forge to escape its own bucket. If a trusted proxy terminates
+    TLS, run Uvicorn with ``--proxy-headers`` and a restricted
+    ``--forwarded-allow-ips`` list so the address is rewritten before it arrives.
+    """
+
+    _MAX_CLIENTS = 4096
+
+    def __init__(self, limit_per_minute: int) -> None:
+        self.limit = limit_per_minute
+        self._lock = threading.Lock()
+        self._windows: dict[str, tuple[int, int]] = {}
+
+    def allow(self, client: str) -> bool:
+        if self.limit <= 0:
+            return True
+        minute = int(time.monotonic() // 60)
+        with self._lock:
+            seen_minute, count = self._windows.get(client, (minute, 0))
+            if seen_minute != minute:
+                count = 0
+            count += 1
+            if client not in self._windows and len(self._windows) >= self._MAX_CLIENTS:
+                for stale in [key for key, (m, _) in self._windows.items() if m != minute]:
+                    del self._windows[stale]
+                if len(self._windows) >= self._MAX_CLIENTS:
+                    # Fail closed rather than let the table grow without bound.
+                    return False
+            self._windows[client] = (minute, count)
+            return count <= self.limit
+
+
+_limiter = _RateLimiter(_RATE_LIMIT_PER_MINUTE)
 
 
 def _operator_key() -> str:
@@ -71,20 +123,46 @@ app = FastAPI(
 app.mount("/assets", StaticFiles(directory=_WEB_DIR), name="assets")
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception(_: Request, exc: Exception) -> JSONResponse:
+    """Log the traceback server-side and never return internals to the caller."""
+    _LOG.error("Unhandled request error", exc_info=exc)
+    return JSONResponse({"detail": "Internal server error"}, status_code=500)
+
+
 @app.middleware("http")
 async def secure_response_headers(request: Request, call_next):
-    if request.method in ("POST", "PUT", "PATCH"):
-        declared = request.headers.get("content-length")
-        if declared and declared.isdigit() and int(declared) > 1_000_000:
+    peer = request.client.host if request.client else "unknown"
+    if request.url.path not in _UNMETERED_PATHS and not _limiter.allow(peer):
+        return JSONResponse({"detail": "Rate limit exceeded"}, status_code=429,
+                            headers={"Retry-After": "60"})
+    if request.method in _WRITE_METHODS:
+        # A chunked body declares no length, so it could stream past the cap.
+        # Demand an explicit length and refuse the request when it is missing.
+        declared = request.headers.get("content-length", "")
+        if "chunked" in request.headers.get("transfer-encoding", "").lower() or not declared.isdigit():
+            return JSONResponse({"detail": "Content-Length required for write requests"},
+                                status_code=411)
+        if int(declared) > _MAX_BODY_BYTES:
             return JSONResponse({"detail": "Request too large"}, status_code=413)
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    response.headers["Permissions-Policy"] = (
+        "accelerometer=(), camera=(), geolocation=(), gyroscope=(), "
+        "magnetometer=(), microphone=(), payment=(), usb=()"
+    )
+    # Ignored on plain HTTP; effective once a TLS terminator fronts the service.
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; script-src 'self'; style-src 'self'; "
-        "img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+        "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
+        "form-action 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
     )
     return response
 
